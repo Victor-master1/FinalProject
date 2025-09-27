@@ -1,0 +1,64 @@
+{
+  "modelId": "a9244f06-1188-4a3f-aebf-22d26cb3e826",
+  "signProgress": {
+    "A": {
+      "viewed": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "mastered": false,
+      "lastStudied": "2025-09-27T13:52:30.377Z",
+      "studyTime": 0,
+      "practiceAttempts": 0,
+      "practiceSuccess": 0,
+      "practiceAccuracy": 0
+    },
+    "E": {
+      "viewed": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "mastered": false,
+      "lastStudied": "2025-09-27T13:52:36.555Z",
+      "studyTime": 0,
+      "practiceAttempts": 0,
+      "practiceSuccess": 0,
+      "practiceAccuracy": 0
+    },
+    "I": {
+      "viewed": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "mastered": false,
+      "lastStudied": "2025-09-27T13:52:49.946Z",
+      "studyTime": 0,
+      "practiceAttempts": 0,
+      "practiceSuccess": 0,
+      "practiceAccuracy": 0
+    },
+    "O": {
+      "viewed": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "mastered": false,
+      "lastStudied": "2025-09-27T13:52:58.277Z",
+      "studyTime": 0,
+      "practiceAttempts": 0,
+      "practiceSuccess": 0,
+      "practiceAccuracy": 0
+    },
+    "U": {
+      "viewed": 0,
+      "correct": 0,
+      "incorrect": 0,
+      "mastered": false,
+      "lastStudied": "2025-09-27T13:53:14.252Z",
+      "studyTime": 0,
+      "practiceAttempts": 1,
+      "practiceSuccess": 0,
+      "practiceAccuracy": 0
+    }
+  },
+  "totalProgress": 0,
+  "completedSigns": 0,
+  "studyTime": 0,
+  "lastStudied": "2025-09-27T13:53:14.269Z"
+}
