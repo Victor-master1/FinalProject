@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
-import { FiTarget, FiZap, FiPlay, FiDownload, FiBarChart, FiSettings, FiBook } from 'react-icons/fi';
+import { FiTarget, FiZap, FiPlay, FiDownload, FiBarChart, FiSettings, FiBook, FiCpu } from 'react-icons/fi';
 import ModelCreator from './components/ModelCreator';
 import ModelTrainer from './components/ModelTrainer';
 import ModelTester from './components/ModelTester';
@@ -10,6 +10,7 @@ import SignLearning from './components/SignLearning';
 import DataVisualizer from './components/DataVisualizer';
 import Settings from './components/Settings';
 import SpeechSynthesis from './components/SpeechSynthesis';
+import SignLanguageCalculator from './components/SignLanguageCalculator';
 import { api } from './utils/api';
 import { settingsManager } from './utils/settingsManager';
 
@@ -25,6 +26,7 @@ const App: React.FC = () => {
     { id: 'train', name: 'Entrenar', icon: FiZap, color: 'from-orange-500 to-red-500' },
     { id: 'test', name: 'Usar Modelo', icon: FiPlay, color: 'from-blue-500 to-indigo-500' },
     { id: 'learn', name: 'Aprender Señas', icon: FiBook, color: 'from-indigo-500 to-purple-500' },
+    { id: 'calculate', name: 'Calculadora', icon: FiCpu, color: 'from-green-500 to-lime-500' },
     { id: 'import', name: 'Importar', icon: FiDownload, color: 'from-purple-500 to-pink-500' },
     { id: 'visualize', name: 'Analytics', icon: FiBarChart, color: 'from-cyan-500 to-blue-500' },
     { id: 'settings', name: 'Configuración', icon: FiSettings, color: 'from-gray-500 to-gray-600' }
@@ -159,6 +161,13 @@ const App: React.FC = () => {
           return <motion.div {...animationProps}><Settings theme={theme} onThemeToggle={toggleTheme} /></motion.div>;
         default:
           return <motion.div {...animationProps}><ModelCreator onModelCreated={handleModelCreated} /></motion.div>;
+        case 'calculate':
+            return (
+    <motion.div {...animationProps}>
+      <SignLanguageCalculator modelId="b9f78499-b46b-4069-ac89-023710278d45" />
+    </motion.div>
+  );
+
       }
     } else {
       switch (activeTab) {
@@ -178,6 +187,12 @@ const App: React.FC = () => {
           return <div><Settings theme={theme} onThemeToggle={toggleTheme} /></div>;
         default:
           return <div><ModelCreator onModelCreated={handleModelCreated} /></div>;
+        case 'calculate':
+           return (
+                  <div>
+                       <SignLanguageCalculator modelId="b9f78499-b46b-4069-ac89-023710278d45" />
+                 </div>
+  );
       }
     }
   };
@@ -227,7 +242,7 @@ const App: React.FC = () => {
               className="inline-block"
             >
               <h1 className={`text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-                Eres Criminal?
+                SignFlow AI
               </h1>
             </motion.div>
             <motion.p

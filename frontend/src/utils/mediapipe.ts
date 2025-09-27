@@ -29,7 +29,7 @@ export class MediaPipeHandler {
       });
 
       this.hands.setOptions({
-        maxNumHands: 1,
+        maxNumHands: 2, // 👈 ahora soporta dos manos
         modelComplexity: 1,
         minDetectionConfidence: 0.8,
         minTrackingConfidence: 0.7
@@ -41,7 +41,7 @@ export class MediaPipeHandler {
 
       await this.startCamera();
 
-      console.log('MediaPipe inicializado correctamente');
+      console.log('MediaPipe inicializado correctamente (dos manos)');
       return true;
 
     } catch (error) {
@@ -132,10 +132,13 @@ export class MediaPipeHandler {
       ctx.drawImage(this.videoElement, 0, 0, this.canvasElement.width, this.canvasElement.height);
     }
 
+    // 👇 soporta múltiples manos
     if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-      for (const landmarks of results.multiHandLandmarks) {
-        this.drawLandmarks(ctx, landmarks);
-      }
+      results.multiHandLandmarks.forEach((landmarks, i) => {
+        const handedness = results.multiHandedness?.[i]?.label || "Desconocida";
+        console.log(`Mano detectada: ${handedness}`);
+        this.drawLandmarks(ctx, landmarks, handedness);
+      });
     }
 
     ctx.restore();
@@ -145,7 +148,7 @@ export class MediaPipeHandler {
     }
   }
 
-  private drawLandmarks(ctx: CanvasRenderingContext2D, landmarks: any[]): void {
+  private drawLandmarks(ctx: CanvasRenderingContext2D, landmarks: any[], handedness: string): void {
     const connections = [
       [0, 1], [1, 2], [2, 3], [3, 4],
       [0, 5], [5, 6], [6, 7], [7, 8],
@@ -155,7 +158,8 @@ export class MediaPipeHandler {
       [0, 17]
     ];
 
-    ctx.strokeStyle = '#00FF00';
+    // 👇 cada mano tiene color distinto
+    ctx.strokeStyle = handedness === "Left" ? '#00FF00' : '#00FF00';
     ctx.lineWidth = 3;
 
     connections.forEach(([start, end]) => {
@@ -167,7 +171,7 @@ export class MediaPipeHandler {
       ctx.stroke();
     });
 
-    ctx.fillStyle = '#FF0000';
+    ctx.fillStyle = handedness === "Left" ? '#FF0000' : '#FFA500';
     landmarks.forEach((landmark) => {
       const x = landmark.x * ctx.canvas.width;
       const y = landmark.y * ctx.canvas.height;

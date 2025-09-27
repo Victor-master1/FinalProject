@@ -8,6 +8,7 @@
     "@mediapipe/drawing_utils": "^0.3.1620248257",
     "@mediapipe/hands": "^0.4.1646424915",
     "@types/node": "^16.18.0",
+    "@types/papaparse": "^5.3.16",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "axios": "^1.6.0",
@@ -15,6 +16,8 @@
     "chartjs-adapter-date-fns": "^3.0.0",
     "date-fns": "^2.30.0",
     "framer-motion": "^10.16.0",
+    "lucide-react": "^0.544.0",
+    "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.2.0",
@@ -50,8 +53,8 @@
     ]
   },
   "devDependencies": {
-    "@types/jest": "^27.5.2",
     "@types/chart.js": "^2.9.37",
+    "@types/jest": "^27.5.2",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.31"
   }
