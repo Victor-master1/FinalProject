@@ -1,4 +1,3 @@
-// SignLanguageCalculator.tsx
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
@@ -13,22 +12,6 @@ import { Results } from "@mediapipe/hands";
 import { api } from "../utils/api";
 import { MediaPipeHandler, createMediaPipeHandler } from "../utils/mediapipe";
 
-/**
- * Props
- */
-type Props = {
-  modelId: string;
-};
-
-/**
- * Constants
- */
-const RECOGNITION_INTERVAL_MS = 650;
-const MIN_CONFIDENCE_THRESHOLD = 0.7;
-
-/**
- * Safe evaluation (sanitizado)
- */
 const safeEvaluateExpression = (expr: string): string => {
   const sanitized = expr.replace(/[^0-9+\-*/.]/g, "");
   if (!sanitized) return "0";
@@ -42,6 +25,10 @@ const safeEvaluateExpression = (expr: string): string => {
   }
 };
 
+interface SignLanguageCalculatorProps {
+  modelId?: string;
+}
+
 interface CalculationState {
   num1: string;
   operator: string;
@@ -50,9 +37,6 @@ interface CalculationState {
   activeBlock: "num1" | "operator" | "num2" | "complete";
 }
 
-/**
- * UI InputBlock
- */
 const InputBlock: React.FC<{ title: string; value: string; isActive: boolean; dark?: boolean }> = ({ title, value, isActive, dark }) => {
   const base = "p-4 rounded-xl font-bold text-center border-2 transition-all duration-300 shadow-md";
   const bg = dark ? "bg-gray-800" : "bg-white";
@@ -72,10 +56,7 @@ const InputBlock: React.FC<{ title: string; value: string; isActive: boolean; da
   );
 };
 
-/**
- * Component
- */
-const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
+const SignLanguageCalculator: React.FC<SignLanguageCalculatorProps> = ({ modelId }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mpHandler = useRef<MediaPipeHandler | null>(null);
@@ -100,12 +81,21 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
 
   const isDarkMode = useMemo(() => document.body.classList.contains("dark"), []);
 
-  // MediaPipe results callback (support for up to 2 hands)
+  // MODELOS
+  const [models, setModels] = useState<any[]>([]);
+  // Usar el modelId recibido como valor inicial
+  const [selectedModelId, setSelectedModelId] = useState<string>(modelId || "");
+
+  useEffect(() => {
+    api.get("/models")
+      .then(res => setModels(res.data))
+      .catch(() => setModels([]));
+  }, []);
+
   const onResults = useCallback((results: Results) => {
     const hasHands = !!(results.multiHandLandmarks && results.multiHandLandmarks.length > 0);
     setHandsDetected(hasHands);
 
-    // Prefer right hand if both present; otherwise first one
     if (hasHands) {
       let chosen = results.multiHandLandmarks[0];
       if (results.multiHandedness && results.multiHandedness.length > 0) {
@@ -124,7 +114,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
     }
   }, []);
 
-  // start / stop camera
   const startCamera = useCallback(async () => {
     if (!videoRef.current || !canvasRef.current) {
       toast.error("No se encontró video/canvas");
@@ -161,34 +150,39 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
     toast.success("Cámara detenida");
   }, []);
 
-  // reset calculator state
   const resetCalculator = useCallback(() => {
     setCalcState({ num1: "", operator: "", num2: "", result: "", activeBlock: "num1" });
   }, []);
 
-  // process prediction into calculation state
+  // Cálculo automático y mantiene la operación hasta limpiar
   const processPrediction = useCallback((prediction: string) => {
     setCalcState((prev) => {
-      // clear instruction
       if (prediction === "clear") {
         return { num1: "", operator: "", num2: "", result: "", activeBlock: "num1" };
       }
 
-      // numeric
       if (!isNaN(Number(prediction))) {
         if (prev.activeBlock === "num1") {
-          // append digit to num1 and move to operator
           return { ...prev, num1: prev.num1 + prediction, activeBlock: "operator" };
         }
         if (prev.activeBlock === "num2") {
-          // append digit to num2 and mark complete
-          return { ...prev, num2: prev.num2 + prediction, activeBlock: "complete" };
+          const newNum2 = prev.num2 + prediction;
+          // Cálculo automático aquí
+          if (prev.num1 && prev.operator && newNum2) {
+            const expr = `${prev.num1}${prev.operator}${newNum2}`;
+            const safe = safeEvaluateExpression(expr);
+            if (safe === "Error") {
+              toast.error("Expresión inválida");
+              return { ...prev, num2: newNum2, result: "Error", activeBlock: "complete" };
+            }
+            // Mantén toda la operación y muestra el resultado
+            return { ...prev, num2: newNum2, result: safe, activeBlock: "complete" };
+          }
+          return { ...prev, num2: newNum2, activeBlock: "complete" };
         }
-        // if operator waiting, ignore digit (user should supply operator first)
         return prev;
       }
 
-      // operator
       if (["+", "-", "*", "/"].includes(prediction)) {
         if (prev.num1 && prev.activeBlock === "operator") {
           return { ...prev, operator: prediction, activeBlock: "num2" };
@@ -196,7 +190,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
         return prev;
       }
 
-      // equal
       if (prediction === "equal") {
         if (prev.num1 && prev.operator && prev.num2) {
           const expr = `${prev.num1}${prev.operator}${prev.num2}`;
@@ -205,8 +198,8 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
             toast.error("Expresión inválida");
             return { ...prev, result: "Error" };
           }
-          // move result to num1 to allow chaining
-          return { num1: safe, operator: "", num2: "", result: safe, activeBlock: "operator" };
+          // Si usas "equal", puedes limpiar o dejar igual, aquí lo dejamos igual
+          return { ...prev, result: safe, activeBlock: "complete" };
         }
         toast.error("Faltan valores para calcular");
         return prev;
@@ -216,7 +209,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
     });
   }, []);
 
-  // recognition function
   const recognizeSign = useCallback(
     async (isAuto = false) => {
       if (!currentLandmarksRef.current) {
@@ -224,24 +216,27 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
         return;
       }
       if (isPredicting) return;
+      if (!selectedModelId) {
+        toast.error("Selecciona un modelo primero");
+        return;
+      }
       setIsPredicting(true);
 
       try {
         const payload = {
-          modelId,
+          modelId: selectedModelId,
           landmarks: currentLandmarksRef.current,
         };
 
         const response = await api.post("/prediction/predict", payload);
         const { prediction, confidence } = response.data;
 
-        if (confidence < MIN_CONFIDENCE_THRESHOLD) {
+        if (confidence < 0.7) {
           if (!isAuto) toast.error("Seña no clara");
           lastPredictionRef.current = null;
           return;
         }
 
-        // avoid repeating same prediction rapidly in auto mode
         if (isAuto && prediction === lastPredictionRef.current) {
           return;
         }
@@ -255,10 +250,9 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
         setIsPredicting(false);
       }
     },
-    [modelId, isPredicting, processPrediction]
+    [selectedModelId, isPredicting, processPrediction]
   );
 
-  // auto recognition effect
   useEffect(() => {
     if (cameraActive && isAutoRecognizing) {
       if (recognitionIntervalRef.current !== null) {
@@ -266,7 +260,7 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
       }
       const id = window.setInterval(() => {
         if (currentLandmarksRef.current) recognizeSign(true);
-      }, RECOGNITION_INTERVAL_MS);
+      }, 650);
       recognitionIntervalRef.current = id as unknown as number;
       return () => {
         if (recognitionIntervalRef.current !== null) {
@@ -282,7 +276,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
     }
   }, [cameraActive, isAutoRecognizing, recognizeSign]);
 
-  // cleanup on unmount
   useEffect(() => {
     return () => {
       stopCamera();
@@ -296,7 +289,19 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
       <aside className="md:col-span-1 space-y-6">
         <div className={`rounded-2xl shadow-xl p-5 ${isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
           <h3 className={`font-extrabold text-xl mb-4 ${isDarkMode ? "text-white" : "text-gray-900"}`}>Controles</h3>
-
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Selecciona un modelo</label>
+            <select
+              value={selectedModelId}
+              onChange={e => setSelectedModelId(e.target.value)}
+              className="w-full px-4 py-2 border rounded"
+            >
+              <option value="">Elige un modelo</option>
+              {models.map(model => (
+                <option key={model.id} value={model.id}>{model.name || model.id}</option>
+              ))}
+            </select>
+          </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -309,7 +314,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
             {isInitializing ? <RefreshIcon className="animate-spin w-5 h-5" /> : <PowerIcon className="w-5 h-5" />}
             {isInitializing ? "Inicializando..." : cameraActive ? "Detener Cámara" : "Iniciar Cámara"}
           </motion.button>
-
           {cameraActive && (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -323,7 +327,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
               {isAutoRecognizing ? "Reconocimiento Automático ON" : "Activar Reconocimiento"}
             </motion.button>
           )}
-
           {cameraActive && !isAutoRecognizing && (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -338,7 +341,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
               Reconocer Seña (Manual)
             </motion.button>
           )}
-
           {(calcState.num1 || calcState.operator || calcState.num2) && (
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -351,7 +353,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
             </motion.button>
           )}
         </div>
-
         <div className={`rounded-2xl shadow-xl p-5 ${isDarkMode ? "bg-gray-800 border border-gray-700" : "bg-white border border-gray-200"}`}>
           <h3 className={`font-extrabold text-xl mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>Estado del Sistema</h3>
           <p className="flex items-center gap-2 font-medium">
@@ -372,13 +373,10 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
           )}
         </div>
       </aside>
-
-      {/* MAIN */}
       <section className="md:col-span-3 space-y-6">
         <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className={`text-3xl font-extrabold text-center ${isDarkMode ? "text-blue-300" : "text-gray-800"}`}>
           Calculadora con Lenguaje de Señas
         </motion.h2>
-
         <div className="relative bg-black rounded-2xl overflow-hidden shadow-2xl mx-auto max-w-2xl aspect-video">
           <video ref={videoRef as any} className="hidden" autoPlay muted playsInline />
           <canvas ref={canvasRef as any} width={640} height={480} className="w-full h-full object-cover" />
@@ -390,7 +388,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
             </div>
           )}
         </div>
-
         <div className="max-w-2xl mx-auto p-4 rounded-2xl shadow-2xl space-y-6">
           <div className="grid grid-cols-5 gap-4 items-center">
             <div className="col-span-2">
@@ -403,7 +400,6 @@ const SignLanguageCalculator: React.FC<Props> = ({ modelId }) => {
               <InputBlock title="NÚMERO 2" value={calcState.num2} isActive={calcState.activeBlock === "num2"} dark={isDarkMode} />
             </div>
           </div>
-
           <div className={`w-full p-6 rounded-2xl shadow-inner transition-colors duration-300 ${isDarkMode ? "bg-gray-800 border-2 border-indigo-600" : "bg-white border-2 border-indigo-400"}`}>
             <p className={`text-right text-sm uppercase font-semibold ${isDarkMode ? "text-indigo-400" : "text-indigo-600"}`}>Resultado</p>
             <div className={`text-right text-6xl font-extrabold mt-1 transition-colors duration-300 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
